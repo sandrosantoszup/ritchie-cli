@@ -30,25 +30,63 @@ var (
 	BasicPass = ""
 )
 
+const (
+	commandsURL  = "/commands"
+	userStateURL = "/user"
+)
+
 type SendManagerHttp struct {
-	URL    string
-	client *http.Client
+	URL       string
+	client    *http.Client
+	collector Collector
+	checker   Checker
 }
 
-func NewHttpSender(url string, client *http.Client) SendManagerHttp {
+func NewHttpSender(
+	url string,
+	client *http.Client,
+	collector Collector,
+	checker Checker,
+) SendManagerHttp {
 	return SendManagerHttp{
-		URL:    url,
-		client: client,
+		URL:       url,
+		client:    client,
+		checker:   checker,
+		collector: collector,
 	}
 }
 
-func (sm SendManagerHttp) Send(APIData APIData) {
-	reqBody, err := json.Marshal(&APIData)
+func (sm SendManagerHttp) SendUserState(ritVersion string) {
+	if !sm.checker.Check() {
+		return
+	}
+	userState := sm.collector.CollectUserState(ritVersion)
+	reqBody, err := json.Marshal(&userState)
 	if err != nil {
 		return
 	}
+	sm.doRequest(reqBody, userStateURL)
+}
 
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, sm.URL, bytes.NewBuffer(reqBody))
+func (sm SendManagerHttp) SendCommandData(cmd SendCommandDataParams) {
+	if !sm.checker.Check() {
+		return
+	}
+	command := sm.collector.CollectCommandData(cmd.ExecutionTime, cmd.Error)
+	reqBody, err := json.Marshal(&command)
+	if err != nil {
+		return
+	}
+	sm.doRequest(reqBody, commandsURL)
+}
+
+func (sm SendManagerHttp) doRequest(reqBody []byte, URLsuffix string) {
+	req, err := http.NewRequestWithContext(
+		context.TODO(),
+		http.MethodPost,
+		sm.URL+URLsuffix,
+		bytes.NewBuffer(reqBody),
+	)
 	if err != nil {
 		return
 	}
@@ -59,7 +97,5 @@ func (sm SendManagerHttp) Send(APIData APIData) {
 	if err != nil {
 		return
 	}
-	if err := resp.Body.Close(); err != nil {
-		return
-	}
+	defer resp.Body.Close()
 }

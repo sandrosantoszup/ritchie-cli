@@ -17,9 +17,11 @@
 package mocks
 
 import (
-	"github.com/ZupIT/ritchie-cli/pkg/formula"
-	"github.com/ZupIT/ritchie-cli/pkg/rcontext"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/ZupIT/ritchie-cli/pkg/formula"
+	"github.com/ZupIT/ritchie-cli/pkg/metric"
+	"github.com/ZupIT/ritchie-cli/pkg/rcontext"
 )
 
 type ContextFinderMock struct {
@@ -40,4 +42,16 @@ func (d *DetailManagerMock) LatestTag(repo formula.Repo) string {
 	args := d.Called(repo)
 
 	return args.String(0)
+}
+
+type SenderMock struct {
+	mock.Mock
+}
+
+func (s *SenderMock) SendUserState(ritVersion string) {
+	s.Called()
+}
+
+func (s *SenderMock) SendCommandData(cmd metric.SendCommandDataParams) {
+	s.Called()
 }

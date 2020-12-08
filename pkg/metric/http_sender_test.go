@@ -19,40 +19,43 @@ package metric
 import (
 	"net/http"
 	"net/http/httptest"
-	"runtime"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/mock"
 )
 
 func TestSendManagerHttp_Send(t *testing.T) {
 	type in struct {
-		APIData APIData
+		checkerReturn bool
 	}
+
 	tests := []struct {
 		name string
 		in   in
 	}{
 		{
-			name: "success",
-			in: in{
-				APIData: APIData{
-					Id:         "metric-id",
-					UserId:     "user-id",
-					Timestamp:  time.Now(),
-					Os:         runtime.GOOS,
-					RitVersion: "2.0.0",
-					Data:       nil,
-				},
-			},
+			name: "success run",
+			in:   in{checkerReturn: true},
+		},
+		{
+			name: "success run with false checker",
+			in:   in{checkerReturn: false},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := server()
 			defer server.Close()
+			checkerMock := &CheckerMock{}
+			checkerMock.On("Check").Return(tt.in.checkerReturn)
 
-			httpSender := NewHttpSender(server.URL, server.Client())
-			httpSender.Send(tt.in.APIData)
+			m := &DataCollectorMock{}
+			m.On("CollectUserState", mock.Anything).Return(User{})
+			m.On("CollectCommandData", mock.Anything, mock.Anything).Return(Command{})
+
+			httpSender := NewHttpSender(server.URL, server.Client(), m, checkerMock)
+			httpSender.SendUserState("2.0.1")
+			httpSender.SendCommandData(SendCommandDataParams{})
 		})
 	}
 }
@@ -61,4 +64,29 @@ func server() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
+}
+
+type DataCollectorMock struct {
+	mock.Mock
+}
+
+func (dc *DataCollectorMock) CollectCommandData(
+	commandExecutionTime float64,
+	commandError ...string,
+) Command {
+	args := dc.Called(commandExecutionTime, commandError)
+	return args.Get(0).(Command)
+}
+
+func (dc *DataCollectorMock) CollectUserState(ritVersion string) User {
+	args := dc.Called(ritVersion)
+	return args.Get(0).(User)
+}
+
+type CheckerMock struct {
+	mock.Mock
+}
+
+func (c *CheckerMock) Check() bool {
+	return c.Called().Get(0).(bool)
 }

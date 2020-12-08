@@ -18,13 +18,12 @@ package cmd
 
 import (
 	"errors"
-	"net/http"
 	"strings"
 	"testing"
 
+	internal "github.com/ZupIT/ritchie-cli/internal/mocks"
 	"github.com/ZupIT/ritchie-cli/pkg/formula"
 	"github.com/ZupIT/ritchie-cli/pkg/git"
-	"github.com/ZupIT/ritchie-cli/pkg/metric"
 	"github.com/ZupIT/ritchie-cli/pkg/prompt"
 	"github.com/ZupIT/ritchie-cli/pkg/rtutorial"
 	"github.com/ZupIT/ritchie-cli/pkg/stream"
@@ -361,7 +360,7 @@ func Test_initCmd_runAnyEntry(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			field := tt.fields
 
-			metricSender := metric.NewHttpSender("", http.DefaultClient)
+			metricSender := &internal.SenderMock{}
 
 			initPrompt := NewInitCmd(
 				field.repo,

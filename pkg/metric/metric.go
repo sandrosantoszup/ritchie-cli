@@ -21,50 +21,61 @@ import (
 	"time"
 
 	"github.com/ZupIT/ritchie-cli/pkg/api"
-	"github.com/ZupIT/ritchie-cli/pkg/formula"
 )
 
 var (
 	ServerRestURL = ""
-	ServerGrpcURL = ""
 	FilePath      = filepath.Join(api.RitchieHomeDir(), "metrics")
 )
 
-type Id string
+type UserID string
 
-func (i Id) String() string {
-	return string(i)
-}
-
-type UserId string
-
-func (u UserId) String() string {
+func (u UserID) String() string {
 	return string(u)
 }
 
-type APIData struct {
-	Id         Id          `json:"metricId"`
-	UserId     UserId      `json:"userId"`
-	Timestamp  time.Time   `json:"timestamp"`
-	Os         string      `json:"os"`
-	RitVersion string      `json:"ritVersion"`
-	Data       interface{} `json:"data"`
+type Command struct {
+	UserID           UserID    `json:"userId"`
+	Timestamp        time.Time `json:"timestamp"`
+	Command          string    `json:"command"`
+	ExecutionTime    float64   `json:"executionTime"`
+	Error            string    `json:"error,omitempty"`
+	CommonsRepoAdded string    `json:"commonsRepoAdded,omitempty"`
 }
 
-type Data struct {
-	CommandError         string       `json:"commandError,omitempty"`
-	CommonsRepoAdded     string       `json:"commonsRepoAdded,omitempty"`
-	CommandExecutionTime float64      `json:"commandExecutionTime"`
-	MetricsAcceptance    string       `json:"metricsAcceptance,omitempty"`
-	FormulaRepo          formula.Repo `json:"repo,omitempty"`
+type User struct {
+	ID            UserID `json:"userId"`
+	OS            string `json:"os"`
+	Version       string `json:"version"`
+	DefaultRunner string `json:"defaultRunner"`
+	Repos         Repos  `json:"repos"`
+}
+
+type Repos []Repo
+
+type Repo struct {
+	Private bool   `json:"private"`
+	URL     string `json:"url,omitempty"`
+	Name    string `json:"name,omitempty"`
+}
+
+type Metadata struct {
+	ID   string      `json:"id"`
+	Data interface{} `json:"data"`
+}
+
+type SendCommandDataParams struct {
+	ExecutionTime float64
+	Error         string
 }
 
 type Sender interface {
-	Send(metric APIData)
+	SendUserState(ritVersion string)
+	SendCommandData(cmd SendCommandDataParams)
 }
 
 type UserIdGenerator interface {
-	Generate() (UserId, error)
+	Generate() UserID
 }
 
 type Checker interface {
@@ -72,5 +83,6 @@ type Checker interface {
 }
 
 type Collector interface {
-	Collect(commandExecutionTime float64, ritVersion string, commandError ...string) (APIData, error)
+	CollectCommandData(commandExecutionTime float64, commandError ...string) Command
+	CollectUserState(ritVersion string) User
 }

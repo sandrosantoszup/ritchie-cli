@@ -119,10 +119,8 @@ func (up updateRepoCmd) runPrompt() CommandRunnerFunc {
 		}
 
 		for _, currRepo := range repoToUpdate {
-
 			git := up.repoProviders.Resolve(currRepo.Provider)
-
-			repoInfo := git.NewRepoInfo(currRepo.Url, currRepo.Token)
+			repoInfo := git.NewRepoInfo(currRepo.URL, currRepo.Token)
 			tags, err := git.Repos.Tags(repoInfo)
 			if err != nil {
 				return err

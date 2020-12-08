@@ -16,13 +16,14 @@
 
 package metric
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestGenerate(t *testing.T) {
 	userIdManager := NewUserIdGenerator()
-	_, err := userIdManager.Generate()
-
-	if err != nil {
-		t.Errorf("Generate wait error equal to null")
-	}
+	ID := userIdManager.Generate()
+	require.NotNil(t, ID)
 }

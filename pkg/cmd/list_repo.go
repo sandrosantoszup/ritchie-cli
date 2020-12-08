@@ -88,7 +88,7 @@ func (lr listRepoCmd) printRepos(repos formula.Repos) {
 			}
 		}
 
-		table.AddRow(repo.Provider, repo.Name, repo.Version, repo.Priority, repo.Url, latestTag)
+		table.AddRow(repo.Provider, repo.Name, repo.Version, repo.Priority, repo.URL, latestTag)
 	}
 	raw := table.Bytes()
 	raw = append(raw, []byte("\n")...)

@@ -69,7 +69,7 @@ func (m LocalManager) Init(workspaceDir string, repoName string) (string, error)
 		Provider: "Local",
 		Name:     formula.RepoName(repoNameStandard),
 		Version:  "0.0.0",
-		Url:      "local repository",
+		URL:      "local repository",
 		Priority: 0,
 		IsLocal:  true,
 	}

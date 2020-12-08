@@ -81,7 +81,7 @@ type initCmd struct {
 	file     stream.FileWriteReadExister
 	prompt.InputList
 	prompt.InputBool
-	metricSender metric.SendManagerHttp
+	metricSender metric.Sender
 }
 
 func NewInitCmd(
@@ -92,7 +92,7 @@ func NewInitCmd(
 	file stream.FileWriteReadExister,
 	inList prompt.InputList,
 	inBool prompt.InputBool,
-	metricSender metric.SendManagerHttp,
+	metricSender metric.Sender,
 ) *cobra.Command {
 	o := initCmd{
 		repo:         repo,
@@ -166,14 +166,14 @@ func (in initCmd) runStdin() CommandRunnerFunc {
 			repo := formula.Repo{
 				Provider: "Github",
 				Name:     "commons",
-				Url:      CommonsRepoURL,
+				URL:      CommonsRepoURL,
 				Priority: 0,
 			}
 
 			s := spinner.StartNew("Adding the commons repository...")
 			time.Sleep(time.Second * 2)
 
-			repoInfo := github.NewRepoInfo(repo.Url, repo.Token)
+			repoInfo := github.NewRepoInfo(repo.URL, repo.Token)
 
 			tag, err := in.git.LatestTag(repoInfo)
 			if err != nil {
@@ -243,19 +243,12 @@ You can view our Privacy Policy (http://insights.zup.com.br/politica-privacidade
 	}
 	fmt.Println(footer)
 
-	responseToWrite := "yes"
+	acceptance := "yes"
 	if choose == DoNotAcceptMetrics {
-		responseToWrite = "no"
-		in.metricSender.Send(metric.APIData{
-			Id:        "rit_init",
-			Timestamp: time.Now(),
-			Data: metric.Data{
-				MetricsAcceptance: responseToWrite,
-			},
-		})
+		acceptance = "no"
 	}
 
-	if err = in.file.Write(metric.FilePath, []byte(responseToWrite)); err != nil {
+	if err = in.file.Write(metric.FilePath, []byte(acceptance)); err != nil {
 		return err
 	}
 
@@ -307,14 +300,14 @@ func (in initCmd) addCommonsRepo() error {
 	repo := formula.Repo{
 		Provider: "Github",
 		Name:     "commons",
-		Url:      CommonsRepoURL,
+		URL:      CommonsRepoURL,
 		Priority: 0,
 	}
 
 	s := spinner.StartNew("Adding the commons repository...")
 	time.Sleep(time.Second * 2)
 
-	repoInfo := github.NewRepoInfo(repo.Url, repo.Token)
+	repoInfo := github.NewRepoInfo(repo.URL, repo.Token)
 
 	tag, err := in.git.LatestTag(repoInfo)
 	if err != nil {

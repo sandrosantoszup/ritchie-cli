@@ -20,6 +20,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/ZupIT/ritchie-cli/pkg/stream"
 	sMocks "github.com/ZupIT/ritchie-cli/pkg/stream/mocks"
 )
@@ -30,6 +32,13 @@ func Test_Collector(t *testing.T) {
 		"name": "",
 		"version": "2.6.0",
 		"url": "https://github.com/ZupIT/ritchie-formulas",
+		"priority": 0
+	},
+{
+		"provider": "Github",
+		"name": "",
+		"version": "2.6.0",
+		"url": "https://github.com/ZupIT/asd-formulas",
 		"priority": 0
 	}]
 `
@@ -48,8 +57,8 @@ func Test_Collector(t *testing.T) {
 			wantErr: false,
 			in: in{
 				userIdGen: UserIdGeneratorMock{
-					GenerateMock: func() (UserId, error) {
-						return "", nil
+					GenerateMock: func() UserID {
+						return ""
 					}},
 				file: sMocks.FileReaderCustomMock{
 					ReadMock: func(path string) ([]byte, error) {
@@ -58,22 +67,12 @@ func Test_Collector(t *testing.T) {
 			},
 		},
 		{
-			name:    "fails when generator returns an error",
-			wantErr: true,
-			in: in{
-				userIdGen: UserIdGeneratorMock{
-					GenerateMock: func() (UserId, error) {
-						return "", errors.New("error generating id")
-					}},
-			},
-		},
-		{
 			name:    "return empty repo when fails on read",
 			wantErr: false,
 			in: in{
 				userIdGen: UserIdGeneratorMock{
-					GenerateMock: func() (UserId, error) {
-						return "", nil
+					GenerateMock: func() UserID {
+						return ""
 					}},
 				file: sMocks.FileReaderCustomMock{
 					ReadMock: func(path string) ([]byte, error) {
@@ -85,20 +84,23 @@ func Test_Collector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			collector := NewDataCollector(tt.in.userIdGen, "", tt.in.file)
-			_, err := collector.Collect(1, "2.0.0")
-			if (err != nil) != tt.wantErr {
-				t.Errorf("execution test failed: %s\nwant error: %t | got: %s", tt.name, tt.wantErr, err)
-			}
+			collector := NewDataCollector(UserIdGeneratorMock{
+				GenerateMock: func() UserID {
+					return ""
+				}}, "", tt.in.file)
+			user := collector.CollectUserState("2.0.0")
+			assert.NotEmpty(t, user)
+
+			command := collector.CollectCommandData(1)
+			assert.NotEmpty(t, command)
 		})
 	}
-
 }
 
 type UserIdGeneratorMock struct {
-	GenerateMock func() (UserId, error)
+	GenerateMock func() UserID
 }
 
-func (us UserIdGeneratorMock) Generate() (UserId, error) {
+func (us UserIdGeneratorMock) Generate() UserID {
 	return us.GenerateMock()
 }

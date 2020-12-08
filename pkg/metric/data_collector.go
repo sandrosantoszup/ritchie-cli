@@ -53,52 +53,69 @@ func NewDataCollector(
 	}
 }
 
-func (d DataCollectorManager) Collect(
+func (d DataCollectorManager) CollectCommandData(
 	commandExecutionTime float64,
-	ritVersion string,
 	commandError ...string,
-) (APIData, error) {
-	userId, err := d.userId.Generate()
-	if err != nil {
-		return APIData{}, err
+) Command {
+	cmdData := Command{
+		UserID:           d.userId.Generate(),
+		Timestamp:        time.Now(),
+		Command:          d.command(),
+		ExecutionTime:    math.Round(commandExecutionTime*100) / 100,
+		Error:            strings.Join(commandError, " "),
+		CommonsRepoAdded: CommonsRepoAdded,
 	}
-
-	commandExecutionTime = math.Round(commandExecutionTime*100) / 100
-
-	data := Data{
-		CommandError:         strings.Join(commandError, " "),
-		CommonsRepoAdded:     CommonsRepoAdded,
-		CommandExecutionTime: commandExecutionTime,
-		FormulaRepo:          d.repoData(),
-	}
-
-	metric := APIData{
-		Id:         Id(metricID()),
-		UserId:     userId,
-		Os:         runtime.GOOS,
-		RitVersion: ritVersion,
-		Timestamp:  time.Now(),
-		Data:       data,
-	}
-	return metric, nil
+	return cmdData
 }
 
-func (d DataCollectorManager) repoData() formula.Repo {
+func (d DataCollectorManager) CollectUserState(ritVersion string) User {
+	user := User{
+		ID:            d.userId.Generate(),
+		OS:            runtime.GOOS,
+		Version:       ritVersion,
+		DefaultRunner: d.defaultRunner(),
+		Repos:         d.userRepos(),
+	}
+	return user
+}
+
+func (d DataCollectorManager) defaultRunner() string {
+	runnerBytes, _ := d.file.Read(
+		filepath.Join(d.ritchieHomeDir, "default-formula-runner"),
+	)
+	if string(runnerBytes) == "0" {
+		return formula.RunnerTypes[0]
+	}
+	return formula.RunnerTypes[1]
+}
+
+func (d DataCollectorManager) userRepos() Repos {
+	fullRepos := d.readRepos()
+	repo := Repo{}
+	repos := Repos{}
+	for _, r := range fullRepos {
+		repo.Private = true
+		repo.URL = r.URL
+		repo.Name = string(r.Name)
+		if r.Token == "" {
+			repo.Private = false
+		}
+		repos = append(repos, repo)
+	}
+
+	return repos
+}
+
+func (d DataCollectorManager) readRepos() formula.Repos {
 	repoBytes, _ := d.file.Read(
 		filepath.Join(d.ritchieHomeDir, formula.ReposDir, "repositories.json"),
 	)
 	repos := formula.Repos{}
 	_ = json.Unmarshal(repoBytes, &repos)
-
-	for _, r := range repos {
-		if string(r.Name) == RepoName && r.Token == "" {
-			return r
-		}
-	}
-	return formula.Repo{}
+	return repos
 }
 
-func metricID() string {
+func (d DataCollectorManager) command() string {
 	args := os.Args
 	args[0] = "rit"
 	return strings.Join(args, "_")
